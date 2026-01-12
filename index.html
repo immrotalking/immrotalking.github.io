@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>NMB AI – Shock Friend Version</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body{
+margin:0;
+font-family:system-ui;
+background:#0b1020;
+color:white;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+}
+.app{
+width:450px;
+height:750px;
+background:#020617;
+border-radius:18px;
+display:flex;
+flex-direction:column;
+box-shadow:0 0 40px #22d3ee;
+overflow:hidden;
+}
+.header{
+padding:14px;
+text-align:center;
+font-weight:700;
+background:linear-gradient(90deg,#0ea5e9,#22d3ee);
+}
+.top{
+display:flex;
+gap:6px;
+padding:8px;
+}
+select,input,button{
+padding:8px;
+border-radius:10px;
+border:none;
+outline:none;
+}
+.chat{
+flex:1;
+padding:12px;
+overflow-y:auto;
+}
+.msg{
+margin:8px 0;
+padding:10px 14px;
+border-radius:14px;
+max-width:80%;
+white-space:pre-wrap;
+}
+.user{background:#38bdf8;color:black;margin-left:auto;}
+.bot{background:#1e293b;}
+.inputBox{
+display:flex;
+gap:6px;
+padding:8px;
+}
+button{
+background:#0ea5e9;
+color:white;
+cursor:pointer;
+}
+.credit{
+text-align:center;
+padding:6px;
+font-size:12px;
+color:#22d3ee;
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+<div class="header">🤖 NMB AI – Shock Friend Version</div>
+
+<div class="top">
+<select id="brain">
+<option value="offline">🧠 Offline Hybrid</option>
+<option value="gpt">🌐 ChatGPT</option>
+<option value="gemini">✨ Gemini</option>
+<option value="mix">🔥 GPT + Gemini Hybrid</option>
+</select>
+<select id="lang">
+<option value="mix">EN + NP</option>
+<option value="np">Nepali Only</option>
+</select>
+</div>
+
+<div class="chat" id="chat"></div>
+
+<div class="inputBox">
+<button onclick="voice()">🎙️</button>
+<input id="input" placeholder="Ask NMB AI..." />
+<button onclick="send()">➤</button>
+</div>
+
+<div class="credit">Made by Ramison Thapa</div>
+</div>
+
+<script>
+/* ✅ API Keys */
+const OPENAI_KEY = "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";
+const GEMINI_KEY = "AIzaSyAKOR9-wRdVcYVcc6VWVDZOluoNb5OkU6I";
+
+const chat=document.getElementById("chat");
+const input=document.getElementById("input");
+let memory=JSON.parse(localStorage.getItem("nmb_mem")||"[]");
+
+boot();
+
+/* Initial welcome */
+function boot(){
+add("Hi 👋 I’m NMB AI, your hybrid brain 😎\nOffline fallback included.\nReady to shock your friend!","bot");
+}
+
+/* Add message to chat */
+function add(t,type){
+const d=document.createElement("div");
+d.className="msg "+type;
+d.textContent=t;
+chat.appendChild(d);
+chat.scrollTop=chat.scrollHeight;
+if(type==="bot") speak(t);
+}
+
+/* Send user input */
+function send(){
+const t=input.value.trim();
+if(!t) return;
+add(t,"user");
+input.value="";
+memory.push(t);
+localStorage.setItem("nmb_mem",JSON.stringify(memory.slice(-20)));
+reply(t.toLowerCase());
+}
+
+/* Main AI Brain */
+async function reply(m){
+const mode=document.getElementById("brain").value;
+const lang=document.getElementById("lang").value;
+let r="🤖 Processing…";
+
+try{
+if(mode==="offline") r=offlineAI(m,lang);
+else if(mode==="gpt" && OPENAI_KEY) r=await chatGPT(promptGPT(m));
+else if(mode==="gemini" && GEMINI_KEY) r=await gemini(promptGemini(m));
+else if(mode==="mix"){
+try{
+const g=await chatGPT(promptGPT(m));
+const ge=await gemini(promptGemini(m));
+r=mergeHybrid(g,ge);
+}catch(e){
+r=offlineAI(m,lang);
+}
+}
+else r=offlineAI(m,lang);
+}catch(e){r=offlineAI(m,lang);}
+add(r,"bot");
+}
+
+/* Offline fallback AI */
+function offlineAI(m,lang){
+let r="🤖 Thinking…";
+if(["hi","hello","hey","namaste"].some(x=>m.includes(x))) r=random(["Hey 👋 k xa bro?","Yo 😎","Namaste 🙏 k cha?"]);
+else if(m.includes("name")) r="I’m NMB AI 🤖";
+else if(m.includes("love")) r="Love is powerful 😏 but careful.";
+else if(m.includes("story")) r=lang==="np"?"कल्पना गर ✨ यो प्रश्न कथा हो।":"Imagine a story world ✨";
+else if(m.includes("how")||m.includes("why")) r="🧠 Step-by-step sochum. Context herera answer hunxa.";
+else if(m.includes("bye")) r="Bye 👋 feri bhetam.";
+else r="🤖 Offline AI: try asking differently.";
+return r;
+}
+
+/* Smart Prompts */
+function promptGPT(m){return "Answer like an extremely smart, witty, helpful AI. Mix English + Nepali. Question: "+m;}
+function promptGemini(m){return "Answer creatively and insightfully. Mix English + Nepali. Question: "+m;}
+
+/* Merge GPT + Gemini */
+function mergeHybrid(g,ge){return "🧠 GPT says:\n"+g+"\n\n✨ Gemini says:\n"+ge;}
+
+/* CHATGPT API */
+async function chatGPT(t){
+try{
+const r=await fetch("https://api.openai.com/v1/chat/completions",{
+method:"POST",
+headers:{"Content-Type":"application/json","Authorization":"Bearer "+OPENAI_KEY},
+body:JSON.stringify({model:"gpt-4o-mini",messages:[{role:"user",content:t}]})
+});
+const d=await r.json();
+return d.choices[0].message.content;
+}catch(e){return offlineAI(t,"mix");}
+}
+
+/* GEMINI API */
+async function gemini(t){
+try{
+const r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key="+GEMINI_KEY,{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({contents:[{parts:[{text:t}]}]})
+});
+const d=await r.json();
+return d.candidates[0].content.parts[0].text;
+}catch(e){return offlineAI(t,"mix");}
+}
+
+/* Utilities */
+function random(a){return a[Math.floor(Math.random()*a.length)];}
+
+/* Voice */
+function speak(t){const s=new SpeechSynthesisUtterance(t);s.lang="en-US";speechSynthesis.speak(s);}
+function voice(){
+if(!('webkitSpeechRecognition' in window)){alert("Voice not supported");return;}
+const r=new webkitSpeechRecognition();
+r.lang="en-US";
+r.onresult=e=>{input.value=e.results[0][0].transcript;send();};
+r.start();
+}
+</script>
+</body>
+  </html>
